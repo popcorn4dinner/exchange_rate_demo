@@ -2,12 +2,13 @@ class ExchangeRatesController < ApplicationController
   before_action :validate_params
 
   def at
-    exchanged_on = Date.parse exchange_rate_params[exchanged_on] rescue nil
-   
-
-    unless exchanged_on.present? && 
-
+    exchanged_on = Date.parse params[exchanged_on]
+    begin
+      @exchange_rate = ExchangeRate.at exchanged_on, params[:from], params[to]
+    rescue ExchangeRate::Errors::RuntimeError => error
+      render json: { error: location.errors }, :bad_request
     end
+
   end
 
   ActionController::Parameters.action_on_unpermitted_parameters = :raise
@@ -18,24 +19,11 @@ class ExchangeRatesController < ApplicationController
 
   private
 
-  def exchange_rate_params
-    params.permit(:exchanged_on, :from, :to)
-  end
-
-  def validate_currencies
-    from = exchange_rate_params[:from]
-    to = exchange_rate_params[:to]
-
-    unless valid_currency?
+  def validate_params
+    exchange_rate = Validations::ExchangeRate.new(params)
+    if !exchange_rate.valid?
+      render json: { error: exchange_rate.errors } and return
     end
-  end
-
-  def valid_currency?(currency)
-    allowed_currencies.include?(currency)
-  end
-
-  def allowed_currencies
-    ['EUR', 'SEK', 'NOK']
   end
 
 end
