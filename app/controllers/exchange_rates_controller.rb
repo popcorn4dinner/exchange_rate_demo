@@ -1,12 +1,14 @@
+require 'exchange_rate/errors/runtime_error'
+
 class ExchangeRatesController < ApplicationController
   before_action :validate_params
 
   def at
-    exchanged_on = Date.parse params[exchanged_on]
+    exchanged_on = Date.parse params[:exchanged_on]
     begin
-      @exchange_rate = ExchangeRate.at exchanged_on, params[:from], params[to]
+      @exchange_rate = ExchangeRate.at exchanged_on, params[:from], params[:to]
     rescue ExchangeRate::Errors::RuntimeError => error
-      render json: { error: location.errors }, status: :bad_request
+      render json: { error: error.message }, status: :bad_request
     end
 
   end
@@ -20,7 +22,7 @@ class ExchangeRatesController < ApplicationController
   private
 
   def validate_params
-    exchange_rate = Validations::ExchangeRate.new(params)
+    exchange_rate = Validations::ExchangeRate.new params
     if !exchange_rate.valid?
       render json: { error: exchange_rate.errors } and return
     end
