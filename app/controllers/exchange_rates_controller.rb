@@ -1,14 +1,27 @@
-require 'exchange_rate/errors/runtime_error'
+require 'exchange_rate/errors/invalid_currency'
+require 'exchange_rate/errors/invalid_exchange_date'
 
 class ExchangeRatesController < ApplicationController
   before_action :validate_params
 
   def at
     exchanged_on = Date.parse params[:exchanged_on]
+
     begin
-      @exchange_rate = ExchangeRate.at exchanged_on, params[:from], params[:to]
-    rescue ExchangeRate::Errors::RuntimeError => error
-      render json: { error: error.message }, status: :bad_request
+      
+      render json: {
+               exchange_rate: {
+                 from: params[:from],
+                 to: params[:to],
+                 exchanged_on: params[:exchanged_on],
+                 rate: ExchangeRate.at(exchanged_on, params[:from], params[:to])
+               }
+             }
+
+    rescue ExchangeRate::Errors::InvalidExchangeDate => error
+      render_runtime_error error
+    rescue ExchangeRate::Errors::InvalidCurrency => error
+      render_runtime_error error
     end
 
   end
@@ -26,6 +39,10 @@ class ExchangeRatesController < ApplicationController
     if !exchange_rate.valid?
       render json: { error: exchange_rate.errors } and return
     end
+  end
+
+  def render_runtime_error(error)
+    render json: { error: error.message }, status: :bad_request and return
   end
 
 end
